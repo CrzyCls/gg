@@ -29,6 +29,14 @@ jobs:
           TOPIC: ${{ secrets.TOPIC }}
         run: python check_vote.py
 
+      - name: Garder la capture d'écran de debug (si présente)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-screenshot
+          path: debug.png
+          if-no-files-found: ignore
+
       - name: Sauver l'état
         run: |
           git config user.name "github-actions"
