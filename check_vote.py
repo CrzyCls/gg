@@ -12,7 +12,7 @@ import re
 import requests
 from playwright.sync_api import sync_playwright
 
-PSEUDO = os.environ["PSEUDO"]
+PSEUDO = os.environ["CrzyCls"]
 TOPIC = os.environ["TOPIC"]
 URL = "https://pixelsmp.fr/vote"
 ETAT_FICHIER = "state.json"
