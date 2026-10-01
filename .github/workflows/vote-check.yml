@@ -1,0 +1,38 @@
+name: Vérification vote PixelSMP
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"   # toutes les 10 minutes
+  workflow_dispatch:          # permet de lancer manuellement depuis GitHub
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Installer les dépendances
+        run: |
+          pip install -r requirements.txt
+          python -m playwright install --with-deps chromium
+
+      - name: Vérifier les timers de vote
+        env:
+          PSEUDO: ${{ secrets.PSEUDO }}
+          TOPIC: ${{ secrets.TOPIC }}
+        run: python check_vote.py
+
+      - name: Sauver l'état
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add state.json
+          git diff --quiet --cached || git commit -m "Mise à jour état vote"
+          git push
