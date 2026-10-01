@@ -26,11 +26,38 @@ def notifier(message):
     print(message)
 
 
+def fermer_bandeau_cookies(page):
+    """Ferme une éventuelle bannière RGPD qui bloquerait les clics suivants."""
+    textes_possibles = [
+        "Tout accepter", "J'accepte", "Accepter", "Accepter tout",
+        "Accept all", "Accept",
+    ]
+    for texte in textes_possibles:
+        bouton = page.get_by_role("button", name=texte)
+        try:
+            if bouton.first.is_visible(timeout=1500):
+                bouton.first.click()
+                page.wait_for_timeout(500)
+                return
+        except Exception:
+            continue
+
+
 def lire_timers(page):
     page.goto(URL)
+    page.wait_for_load_state("networkidle")
+    fermer_bandeau_cookies(page)
+
     page.locator("input[type=text]").first.fill(PSEUDO)
     page.get_by_role("button", name="Continuer").click()
-    page.wait_for_timeout(4000)
+
+    # Attend que le premier compte à rebours (ou le texte "Cliquer pour voter")
+    # soit bien affiché avant de lire la page, plutôt qu'une pause fixe trop courte.
+    try:
+        page.wait_for_selector("text=/\\d{2}:\\d{2}:\\d{2}/", timeout=10000)
+    except Exception:
+        pass
+    page.wait_for_timeout(2000)
 
     resultats = {}
     for carte in page.locator("a", has_text="Site #").all():
@@ -41,6 +68,11 @@ def lire_timers(page):
         t = TIMER.search(texte)
         secondes = int(t[1]) * 3600 + int(t[2]) * 60 + int(t[3]) if t else 0
         resultats[f"Site #{site[1]}"] = secondes
+
+    if not resultats or all(v == 0 for v in resultats.values()):
+        # Rien de fiable détecté : on garde une preuve visuelle pour diagnostiquer.
+        page.screenshot(path="debug.png", full_page=True)
+
     return resultats
 
 
@@ -66,6 +98,10 @@ def main():
         navigateur.close()
 
     print("Timers :", timers)
+
+    if timers and all(v == 0 for v in timers.values()):
+        print("⚠️ Tous les timers sont à 0 en même temps : lecture suspecte, pas de notif envoyée.")
+        return
 
     for site, secondes in timers.items():
         deja_notifie = etat.get(site, False)
