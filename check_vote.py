@@ -49,7 +49,7 @@ def lire_timers(page):
     fermer_bandeau_cookies(page)
 
     page.locator("input[type=text]").first.fill(PSEUDO)
-    page.get_by_role("button", name="Continuer").click()
+    page.locator("input[type=text]").first.press("Enter")
 
     # Attend que le premier compte à rebours (ou le texte "Cliquer pour voter")
     # soit bien affiché avant de lire la page, plutôt qu'une pause fixe trop courte.
@@ -66,7 +66,12 @@ def lire_timers(page):
         if not site:
             continue
         t = TIMER.search(texte)
-        secondes = int(t[1]) * 3600 + int(t[2]) * 60 + int(t[3]) if t else 0
+        if t:
+            # Calcule les secondes et retire 120 secondes (2 minutes) d'avance
+            secondes_reelles = int(t[1]) * 3600 + int(t[2]) * 60 + int(t[3])
+            secondes = max(0, secondes_reelles - 120)
+        else:
+            secondes = 0
         resultats[f"Site #{site[1]}"] = secondes
 
     if not resultats or all(v == 0 for v in resultats.values()):
